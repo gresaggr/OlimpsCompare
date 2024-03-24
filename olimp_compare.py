@@ -1,4 +1,5 @@
 import asyncio
+import distutils
 import logging.handlers
 import sys
 import time
@@ -104,6 +105,13 @@ def read_settings() -> dict:
     """
     config = ConfigParser(interpolation=None)
     config.read('config.ini', encoding='utf-8-sig')
+
+    try:
+        get_coeffs = bool(distutils.util.strtobool(config['Settings']['GET_COEFFS']))
+    except KeyError:
+        logging.info('Работа без сравнения коэффициентов!')
+        get_coeffs = False
+
     try:
         url_olimpcom = config['Settings']['URL_OLIMPCOM']
     except KeyError:
@@ -135,6 +143,7 @@ def read_settings() -> dict:
         sys.exit()
 
     return {
+        "get_coeffs": get_coeffs,
         "url_olimpcom": url_olimpcom,
         "url_olimpbet": url_olimpbet,
         "user_agent": user_agent,
@@ -164,12 +173,17 @@ async def main():
     browser = await apw.chromium.launch()
     page = await browser.new_page()
 
-    olimps = await asyncio.gather(olimp_bet.get_bets(page), olimp_com.get_bets())
+    get_coeffs = settings.get("get_coeffs")
+    olimps = await asyncio.gather(
+        olimp_bet.get_bets(page, is_need_coeffs=get_coeffs),
+        olimp_com.get_bets(is_need_coeffs=get_coeffs))
     if not all([res.get("result") for res in olimps]):
         logging.error('Не удалось получить информацию для сравнения')
         return OlimpCodes.error_get_list
-    # show_only_same_games([olimp.get("response") for olimp in olimps])
-    show_same_games_with_coeffs([olimp.get("response") for olimp in olimps], sign_list=['>', '<'])
+    if not get_coeffs:
+        show_only_same_games([olimp.get("response") for olimp in olimps])
+    else:
+        show_same_games_with_coeffs([olimp.get("response") for olimp in olimps], sign_list=['>', '<'])
     await browser.close()
 
 

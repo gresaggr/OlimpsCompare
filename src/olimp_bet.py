@@ -129,7 +129,7 @@ class OlimpBet:
             games[game_name] = current_game | {"coeff": coeff, "coeff_name": coeff_name, "short_name": short_name}
         return games
 
-    async def get_bets(self, page: Page) -> dict:
+    async def get_bets(self, page: Page, is_need_coeffs: bool = False) -> dict:
         log('Получение информации для OlimpBet...')
 
         # response = self._get_raw_response_from_file()  # для отладки работаем с сохраненным ранее ответом
@@ -157,6 +157,10 @@ class OlimpBet:
             return {"result": False, "response": OlimpCodes.error_games_pars}
 
         log(f'Количество игр на странице = {len(all_games)}')
+
+        if not is_need_coeffs:
+            return {"result": True, "response": all_games}
+
         games = await self._get_all_coefficients(all_games, coeff_name=self.coeff_name)
         if not games:
             log('Возможно сменилась верстка на сайте...')

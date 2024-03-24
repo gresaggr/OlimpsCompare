@@ -116,7 +116,7 @@ class OlimpCom:
             games[current_game[0]] = current_game[1] | {"coeff": coeff, "coeff_name": coeff_name}
         return games
 
-    async def get_bets(self):
+    async def get_bets(self, is_need_coeffs: bool = False):
         log('Получение информации для OlimpCom...')
         response = await fetch_response(url=f'{self.url}', headers=self.headers, proxy=self.proxy,
                                         timeout=self.timeout)
@@ -132,6 +132,10 @@ class OlimpCom:
             return {"result": False, "response": OlimpCodes.error_games_pars}
 
         log(f'Количество игр на странице = {len(all_games)}')
+
+        if not is_need_coeffs:
+            return {"result": True, "response": all_games}
+
         games = await self._get_all_coefficients(all_games, coeff_name=self.coeff_name)
         if not games:
             log('Возможно сменилась верстка на сайте...')
